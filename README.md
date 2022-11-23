@@ -1,6 +1,12 @@
 # chop
 CLI tool to make structured logging human-readable.
 
+## Install
+
+```bash
+go install github.com/bamsammich/chop@latest
+```
+
 ## Usage
 
 ```text
