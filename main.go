@@ -14,10 +14,11 @@ import (
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&messageField, "message-field", "m", defaultMessageField, "field containing log message")
 	rootCmd.PersistentFlags().StringSliceVarP(&columns, "columns", "c", []string{defaultMessageField}, "field names to extract to columns")
-	rootCmd.PersistentFlags().IntVar(&maxColumnWidth, "max-column-width", 60, "set maximum column width")
+	rootCmd.PersistentFlags().IntVarP(&maxColumnWidth, "max-column-width", "w", 60, "set maximum column width [0 unsets this]")
 	rootCmd.PersistentFlags().IntVarP(&beforeLine, "before", "B", -1, "print lines before this count [-1 unsets this]")
 	rootCmd.PersistentFlags().IntVarP(&afterLine, "after", "A", 0, "print lines after this count")
 	rootCmd.PersistentFlags().BoolVarP(&excludeExtraFields, "exclude-extra-fields", "x", false, "exclude extra fields not defined by `columns`")
+	rootCmd.PersistentFlags().SortFlags = true
 }
 
 var (
