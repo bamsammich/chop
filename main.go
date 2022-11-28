@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"text/tabwriter"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -46,23 +46,28 @@ var rootCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var (
-			w       = tabwriter.NewWriter(os.Stdout, 5, 1, 2, ' ', tabwriter.TabIndent)
+			tw      = tablewriter.NewWriter(os.Stdout)
 			headers = append([]string{countHeader}, columns...)
 		)
+
+		tw.SetAutoWrapText(false)
+		tw.SetAutoFormatHeaders(true)
+
 		if !excludeExtraFields {
 			headers = append(headers, fieldsHeader)
 		}
+		tw.SetHeader(headers)
 		if len(args) == 0 {
-			err = FromStdin(w, headers...)
+			err = FromStdin(tw, headers...)
 		} else {
-			err = FromFile(w, args[0], headers...)
+			err = FromFile(tw, args[0], headers...)
 		}
-		w.Flush()
+		tw.Render()
 		return
 	},
 }
 
-func FromStdin(w io.Writer, headers ...string) error {
+func FromStdin(tw *tablewriter.Table, headers ...string) error {
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
@@ -72,9 +77,9 @@ func FromStdin(w io.Writer, headers ...string) error {
 		scanner = bufio.NewScanner(os.Stdin)
 		count   = 0
 	)
-	printHeader(w, headers...)
+
 	for scanner.Scan() {
-		if err := printLine(w, count, scanner.Text(), columns...); err != nil {
+		if err := printLine(tw, count, scanner.Text(), columns...); err != nil {
 			return err
 		}
 		count++
@@ -83,7 +88,7 @@ func FromStdin(w io.Writer, headers ...string) error {
 	return nil
 }
 
-func FromFile(w io.Writer, path string, headers ...string) error {
+func FromFile(tw *tablewriter.Table, path string, headers ...string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -101,9 +106,9 @@ func FromFile(w io.Writer, path string, headers ...string) error {
 		scanner = bufio.NewScanner(file)
 		count   = 0
 	)
-	printHeader(w, headers...)
+	// printHeader(w, headers...)
 	for scanner.Scan() {
-		if err := printLine(w, count, scanner.Text(), columns...); err != nil {
+		if err := printLine(tw, count, scanner.Text(), columns...); err != nil {
 			return err
 		}
 		count++
@@ -111,7 +116,7 @@ func FromFile(w io.Writer, path string, headers ...string) error {
 	return nil
 }
 
-func printLine(w io.Writer, count int, line string, columns ...string) error {
+func printLine(tw *tablewriter.Table, count int, line string, columns ...string) error {
 	if beforeLine >= 0 && count > beforeLine {
 		return nil
 	}
@@ -125,30 +130,30 @@ func printLine(w io.Writer, count int, line string, columns ...string) error {
 	if err := json.Unmarshal([]byte(line), &fieldMap); err != nil {
 		return err
 	}
-	var message = fmt.Sprintf("%4d\t", count)
+	var row = []string{fmt.Sprintf("%4d", count)}
 	for _, col := range columns {
 		var (
 			val string
 			ok  bool
 		)
 		if val, ok = fieldMap[col].(string); !ok {
-			message = fmt.Sprintf("%s --- \t", message)
+			row = append(row, " --- ")
 			continue
 		}
 		if len(val) > maxColumnWidth && maxColumnWidth > 0 {
 			val = fmt.Sprintf("%s...", string(val[:maxColumnWidth]))
 		}
-		message = fmt.Sprintf("%s%s\t", message, val)
+		row = append(row, val)
 		delete(fieldMap, col)
 	}
 	if !excludeExtraFields {
 		if len(fieldMap) > 0 {
-			message = fmt.Sprintf("%s%+v\t", message, fieldMap)
+			row = append(row, fmt.Sprintf("%+v", fieldMap))
 		} else {
-			message = fmt.Sprintf("%s%+v\t", message, fieldMap)
+			row = append(row, " --- ")
 		}
 	}
-	fmt.Fprintln(w, message)
+	tw.Append(row)
 	return nil
 }
 
