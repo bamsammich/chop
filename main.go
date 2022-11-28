@@ -51,25 +51,27 @@ var rootCmd = &cobra.Command{
 		if !excludeExtraFields {
 			headers = append(headers, fieldsHeader)
 		}
-		printHeader(w, headers...)
 		if len(args) == 0 {
-			err = FromStdin(w)
+			err = FromStdin(w, headers...)
 		} else {
-			err = FromFile(w, args[0])
+			err = FromFile(w, args[0], headers...)
 		}
 		w.Flush()
 		return
 	},
 }
 
-func FromStdin(w io.Writer) error {
+func FromStdin(w io.Writer, headers ...string) error {
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	var count = 0
+	var (
+		scanner = bufio.NewScanner(os.Stdin)
+		count   = 0
+	)
+	printHeader(w, headers...)
 	for scanner.Scan() {
 		if err := printLine(w, count, scanner.Text(), columns...); err != nil {
 			return err
@@ -80,7 +82,7 @@ func FromStdin(w io.Writer) error {
 	return nil
 }
 
-func FromFile(w io.Writer, path string) error {
+func FromFile(w io.Writer, path string, headers ...string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -93,8 +95,12 @@ func FromFile(w io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(file)
-	var count = 0
+
+	var (
+		scanner = bufio.NewScanner(file)
+		count   = 0
+	)
+	printHeader(w, headers...)
 	for scanner.Scan() {
 		if err := printLine(w, count, scanner.Text(), columns...); err != nil {
 			return err
