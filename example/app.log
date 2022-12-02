@@ -1,5 +1,6 @@
 initializing app
 {"timestamp":"2022/01/01 01:00:00", "message": "App has started", "level": "INFO"}
 {"timestamp":"2022/01/01 01:00:01", "message": "Processing records", "level": "INFO"}
+{"timestamp":"2022/01/01 01:01:01", "message": "Processing a really long record name with many different fields and paths to go down. Why would anyone make a record this large? I don't think we'll be able to process it before the timeout", "level": "INFO"}
 {"timestamp":"2022/01/01 01:03:00", "message": "Error processing records", "exception":"timeout", "level": "ERROR"}
 terminating app

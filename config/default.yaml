@@ -1,0 +1,13 @@
+formats:
+  default:
+    lineNumbers: true
+    autoWrapText: true
+    printExtraFields: true
+    columnSpacer: " | "
+    columns:
+      - header: Timestamp
+        field: timestamp
+        maxWidth: 20
+      - header: message
+        maxWidth: 80
+        isMessage: true
