@@ -50,13 +50,11 @@ func newRootCmd() *cobra.Command {
 			}
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				err = FromStdin()
-			} else {
-				err = FromFile(args[0])
+				return FromStdin()
 			}
-			return
+			return FromFile(args[0])
 		},
 	}
 	cmd.PersistentFlags().StringSliceVarP(&formatTuples, "format", "f", formatTuples, "tuples of field names to print and column width")
