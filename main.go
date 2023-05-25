@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,9 @@ func newRootCmd() *cobra.Command {
 		Args:  cobra.RangeArgs(0, 1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			for _, tuple := range formatTuples {
+				if !regexp.MustCompile(`.*=\d+`).Match([]byte(tuple)) {
+					return fmt.Errorf("format %q is invalid: must match <field_name>=<number>", tuple)
+				}
 				parts := strings.Split(tuple, "=")
 				width, err := strconv.Atoi(parts[1])
 				if err != nil {
