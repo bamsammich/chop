@@ -51,7 +51,6 @@ func newRootCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			printHeader(format)
 			if len(args) == 0 {
 				err = FromStdin()
 			} else {
@@ -71,6 +70,7 @@ func FromStdin() error {
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
 	}
+	printHeader(format)
 	return printLogs(os.Stdin)
 }
 
@@ -104,6 +104,7 @@ func FromFile(path string) error {
 	if err != nil {
 		return err
 	}
+	printHeader(format)
 	return printLogs(file)
 }
 
