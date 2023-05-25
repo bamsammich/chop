@@ -4,70 +4,64 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
+	"strconv"
+	"strings"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.PersistentFlags().StringVarP(&messageField, "message-field", "m", defaultMessageField, "field containing log message")
-	rootCmd.PersistentFlags().StringSliceVarP(&columns, "columns", "c", []string{defaultMessageField}, "field names to extract to columns")
-	rootCmd.PersistentFlags().IntVarP(&maxColumnWidth, "max-column-width", "w", 60, "set maximum column width [0 unsets this]")
-	rootCmd.PersistentFlags().IntVarP(&beforeLine, "before", "B", -1, "print lines before this count [-1 unsets this]")
-	rootCmd.PersistentFlags().IntVarP(&afterLine, "after", "A", 0, "print lines after this count")
-	rootCmd.PersistentFlags().BoolVarP(&excludeExtraFields, "exclude-extra-fields", "x", false, "exclude extra fields not defined by `columns`")
-	rootCmd.PersistentFlags().SortFlags = true
-}
+const extraFieldsName = "_fields"
 
 var (
-	beforeLine int
-	afterLine  int
-
-	maxColumnWidth int
-	columns        []string
-
-	countHeader         = "   #"
-	fieldsHeader        = "fields"
-	defaultMessageField = "message"
-	messageField        string
-	excludeExtraFields  bool
+	formatTuples = []string{"message=60"}
+	fieldOrder   []string
+	format       = make(map[string]int)
+	printExtras  bool
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "chop [path]",
-	Short: "Write structured log in a human-readable way.",
-	Args:  cobra.RangeArgs(0, 1),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		if messageField != defaultMessageField {
-			columns = replace(columns, defaultMessageField, messageField)
-		}
-	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var (
-			tw      = tablewriter.NewWriter(os.Stdout)
-			headers = append([]string{countHeader}, columns...)
-		)
+func newRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "chop [path]",
+		Short: "Write structured logs in a human-readable way.",
+		Args:  cobra.RangeArgs(0, 1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			for _, tuple := range formatTuples {
+				parts := strings.Split(tuple, "=")
+				width, err := strconv.Atoi(parts[1])
+				if err != nil {
+					return err
+				}
+				field := parts[0]
+				fieldOrder = append(fieldOrder, field)
+				if len(field) > width {
+					width = len(field)
+				}
+				format[field] = width
+			}
+			if printExtras && !contains(fieldOrder, extraFieldsName) {
+				fieldOrder = append(fieldOrder, extraFieldsName)
+				format[extraFieldsName] = 50
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			printHeader(format)
+			if len(args) == 0 {
+				err = FromStdin()
+			} else {
+				err = FromFile(args[0])
+			}
+			return
+		},
+	}
+	cmd.PersistentFlags().StringSliceVarP(&formatTuples, "format", "f", formatTuples, "tuples of field names to print and column width")
+	cmd.PersistentFlags().BoolVarP(&printExtras, "print-all", "a", false, "print all fields; fields without format defined will be printed as JSON")
 
-		tw.SetAutoWrapText(false)
-		tw.SetAutoFormatHeaders(true)
-
-		if !excludeExtraFields {
-			headers = append(headers, fieldsHeader)
-		}
-		tw.SetHeader(headers)
-		if len(args) == 0 {
-			err = FromStdin(tw, headers...)
-		} else {
-			err = FromFile(tw, args[0], headers...)
-		}
-		tw.Render()
-		return
-	},
+	return cmd
 }
 
-func FromStdin(tw *tablewriter.Table, headers ...string) error {
+func FromStdin() error {
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
@@ -79,16 +73,17 @@ func FromStdin(tw *tablewriter.Table, headers ...string) error {
 	)
 
 	for scanner.Scan() {
-		if err := printLine(tw, count, scanner.Text(), columns...); err != nil {
+		log, err := LogFromString(count, scanner.Text())
+		if err != nil {
 			return err
 		}
+		log.Print()
 		count++
 	}
-
 	return nil
 }
 
-func FromFile(tw *tablewriter.Table, path string, headers ...string) error {
+func FromFile(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -106,78 +101,93 @@ func FromFile(tw *tablewriter.Table, path string, headers ...string) error {
 		scanner = bufio.NewScanner(file)
 		count   = 0
 	)
-	// printHeader(w, headers...)
 	for scanner.Scan() {
-		if err := printLine(tw, count, scanner.Text(), columns...); err != nil {
+		log, err := LogFromString(count, scanner.Text())
+		if err != nil {
 			return err
 		}
+		log.Print()
 		count++
 	}
 	return nil
 }
 
-func printLine(tw *tablewriter.Table, count int, line string, columns ...string) error {
-	if beforeLine >= 0 && count > beforeLine {
-		return nil
-	}
-	if count < afterLine {
-		return nil
-	}
-	fieldMap := make(map[string]any)
+type Log struct {
+	Fields map[string]logField
+	Number int
+}
+
+type logField struct {
+	Value any
+	Width int
+}
+
+func (lf logField) Format() string {
+	return fmt.Sprintf("%*v", lf.Width, lf.Value)
+}
+
+func LogFromString(count int, line string) (*Log, error) {
+	log := &Log{Number: count, Fields: map[string]logField{}}
+	fields := make(map[string]any)
+	extras := make(map[string]any)
 	if !json.Valid([]byte(line)) {
-		line = fmt.Sprintf("{%q:%q}", messageField, line)
+		log.Fields["message"] = logField{Value: line, Width: format["message"]}
+		return log, nil
 	}
-	if err := json.Unmarshal([]byte(line), &fieldMap); err != nil {
-		return err
+	if err := json.Unmarshal([]byte(line), &fields); err != nil {
+		return nil, err
 	}
-	var row = []string{fmt.Sprintf("%4d", count)}
-	for _, col := range columns {
-		var (
-			val string
-			ok  bool
-		)
-		if val, ok = fieldMap[col].(string); !ok {
-			row = append(row, " --- ")
+	for k, v := range fields {
+		if _, ok := format[k]; !ok {
+			extras[k] = v
 			continue
 		}
-		if len(val) > maxColumnWidth && maxColumnWidth > 0 {
-			val = fmt.Sprintf("%s...", string(val[:maxColumnWidth]))
-		}
-		row = append(row, val)
-		delete(fieldMap, col)
+		log.Fields[k] = logField{Value: v, Width: format[k]}
 	}
-	if !excludeExtraFields {
-		if len(fieldMap) > 0 {
-			row = append(row, fmt.Sprintf("%+v", fieldMap))
-		} else {
-			row = append(row, " --- ")
+	for k, v := range format {
+		if _, ok := log.Fields[k]; !ok {
+			log.Fields[k] = logField{Value: "", Width: v}
 		}
 	}
-	tw.Append(row)
-	return nil
+	if printExtras {
+		b, err := json.Marshal(extras)
+		if err != nil {
+			return nil, err
+		}
+		log.Fields[extraFieldsName] = logField{Value: string(b), Width: format[extraFieldsName]}
+	}
+	return log, nil
 }
 
-func printHeader(w io.Writer, columns ...string) {
-	var line string
-	for _, col := range columns {
-		if line == "" {
-			line = fmt.Sprintf("%s\t", col)
-		} else {
-			line = fmt.Sprintf("%s%s\t", line, col)
+func (l *Log) Print() {
+	line := fmt.Sprintf("%6d", l.Number)
+	for _, name := range fieldOrder {
+		if _, ok := l.Fields[name]; ok {
+			line = fmt.Sprintf("%s %s", line, l.Fields[name].Format())
+			continue
 		}
+		line = fmt.Sprintf("%s %*s", line, format[name], "-")
 	}
-	fmt.Fprintf(w, "%s\n", line)
+	fmt.Println(line)
 }
 
-func replace[T comparable](l []T, old, new T) []T {
-	for i, other := range l {
-		if other == old {
-			l[i] = new
-		}
+func printHeader(format map[string]int) {
+	line := fmt.Sprintf("%6s", " ")
+	for _, name := range fieldOrder {
+		line = fmt.Sprintf("%s %*s", line, format[name], name)
 	}
-	return l
+	fmt.Println(line)
 }
 
 func main() {
-	rootCmd.Execute()
+	newRootCmd().Execute()
+}
+
+func contains[T comparable](sl []T, e T) bool {
+	for _, i := range sl {
+		if i == e {
+			return true
+		}
+	}
+	return false
 }
