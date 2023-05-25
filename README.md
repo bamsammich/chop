@@ -60,7 +60,7 @@ To add more/custom fields to `chop`'s output, pass additional fields as columns:
 `chop` also accepts input from `stdin`:
 
 ```bash
-> flog -f json -d 1s -n 10 | ./chop --format datetime=26,host=15,user-identifier=20,method=6,status=3,request=50
+> flog -f json -d 1s -n 10 | chop --format datetime=26,host=15,user-identifier=20,method=6,status=3,request=50
                          datetime            host      user-identifier method status                                            request
      0 24/May/2023:21:00:13 -0400 211.105.219.117                    -    GET    401                                           /dynamic
      1 24/May/2023:21:00:14 -0400     89.4.252.66           beatty7336  PATCH    302                 /communities/iterate/seamless/rich

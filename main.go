@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,6 +29,9 @@ func newRootCmd() *cobra.Command {
 		Args:  cobra.RangeArgs(0, 1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			for _, tuple := range formatTuples {
+				if !regexp.MustCompile(`.*=\d+`).Match([]byte(tuple)) {
+					return fmt.Errorf("format %q is invalid: must match <field_name>=<number>", tuple)
+				}
 				parts := strings.Split(tuple, "=")
 				width, err := strconv.Atoi(parts[1])
 				if err != nil {
@@ -66,7 +71,10 @@ func FromStdin() error {
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
 	}
+	return printLogs(os.Stdin)
+}
 
+func printLogs(r io.Reader) error {
 	var (
 		scanner = bufio.NewScanner(os.Stdin)
 		count   = 0
@@ -96,20 +104,7 @@ func FromFile(path string) error {
 	if err != nil {
 		return err
 	}
-
-	var (
-		scanner = bufio.NewScanner(file)
-		count   = 0
-	)
-	for scanner.Scan() {
-		log, err := LogFromString(count, scanner.Text())
-		if err != nil {
-			return err
-		}
-		log.Print()
-		count++
-	}
-	return nil
+	return printLogs(file)
 }
 
 type Log struct {
