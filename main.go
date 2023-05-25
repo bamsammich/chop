@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -70,7 +71,10 @@ func FromStdin() error {
 	if (stat.Mode() & os.ModeCharDevice) != 0 {
 		return fmt.Errorf("nothing passed to chop")
 	}
+	return printLogs(os.Stdin)
+}
 
+func printLogs(r io.Reader) error {
 	var (
 		scanner = bufio.NewScanner(os.Stdin)
 		count   = 0
@@ -100,20 +104,7 @@ func FromFile(path string) error {
 	if err != nil {
 		return err
 	}
-
-	var (
-		scanner = bufio.NewScanner(file)
-		count   = 0
-	)
-	for scanner.Scan() {
-		log, err := LogFromString(count, scanner.Text())
-		if err != nil {
-			return err
-		}
-		log.Print()
-		count++
-	}
-	return nil
+	return printLogs(file)
 }
 
 type Log struct {
