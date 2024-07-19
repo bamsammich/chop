@@ -44,23 +44,21 @@ And prints them like this:
                             initializing app
 
 
-                                     message               timestamp    level
+                                     message    level               timestamp
 ------------------------------------------------------------------------------
-                             App has started     2022/01/01 01:00:00     INFO
-                          Processing records     2022/01/01 01:00:01     INFO
+                             App has started     INFO     2022/01/01 01:00:00
+                          Processing records     INFO     2022/01/01 01:00:01
 
 
-                                     message               timestamp    level   exception
+                                     message    level               timestamp   exception
 ------------------------------------------------------------------------------------------
-                    Error processing records     2022/01/01 01:03:00    ERROR     timeout
-                             terminating app                   <nil>    <nil>       <nil>
+                    Error processing records    ERROR     2022/01/01 01:03:00     timeout
+                             terminating app    <nil>                   <nil>       <nil>
 ```
 
 You can select which fields should be printed with `-i/--include:
 ```bash
 ❯ chop ./example/app.log -i message,level,exception
-
-
                                      message
 ---------------------------------------------
                             initializing app
@@ -82,8 +80,6 @@ Alternatively, you can exclude certain fields from printing with `-e/--exclude`:
 
 ```bash
 ❯ chop ./example/app.log -e level
-
-
                                      message
 ---------------------------------------------
                             initializing app
@@ -104,31 +100,31 @@ Alternatively, you can exclude certain fields from printing with `-e/--exclude`:
 `chop` also accepts input from `stdin`:
 
 ```bash
-❯ flog -f json -d 100ms -n 10 | chop -i datetime,host,method,status,request
+❯ ❯ flog -f json -d 100ms -n 10 | chop -i datetime,host,method,status,request
 
 
-                      datetime                        request  status              host  method
-------------------------------------------------------------------------------------------------
-    19/Jul/2024:09:38:02 -0400     /dot-com/synergistic/seize     406     25.42.250.210     PUT
+ status             host                       datetime                        request     method
+--------------------------------------------------------------------------------------------------
+    205     63.175.94.92     19/Jul/2024:09:54:10 -0400     /out-of-the-box/synthesize     DELETE
 
 
-                      datetime                        request  status              host  method
-------------------------------------------------------------------------------------------------
-    19/Jul/2024:09:38:02 -0400              /leverage/dynamic     502     165.86.242.53    HEAD
+ status             host                       datetime                        request     method
+--------------------------------------------------------------------------------------------------
+    502   111.19.159.247     19/Jul/2024:09:54:11 -0400                      /wireless     DELETE
 
 
-                      datetime                        request  status              host  method
-------------------------------------------------------------------------------------------------
-    19/Jul/2024:09:38:02 -0400     /niches/strategize/infrastructures/next-generation     304   191.161.227.211    POST
+ status             host                       datetime                                       request     method
+-----------------------------------------------------------------------------------------------------------------
+    401     89.221.29.45     19/Jul/2024:09:54:11 -0400     /web+services/morph/cutting-edge/innovate       POST
 
 
-                      datetime                                                request  status              host  method
-------------------------------------------------------------------------------------------------------------------------
-    19/Jul/2024:09:38:02 -0400                    /value-added/web+services/sexy/grow     400       92.97.30.95  DELETE
-    19/Jul/2024:09:38:02 -0400                                           /cross-media     406    60.105.221.131     PUT
-    19/Jul/2024:09:38:02 -0400           /convergence/e-tailers/e-business/compelling     500       46.7.208.26   PATCH
-    19/Jul/2024:09:38:02 -0400                               /interfaces/leading-edge     405      25.159.14.66     PUT
-    19/Jul/2024:09:38:03 -0400                   /cutting-edge/world-class/extensible     501     174.218.96.64  DELETE
-    19/Jul/2024:09:38:03 -0400                     /deploy/next-generation/synthesize     200    40.158.231.177     GET
-    19/Jul/2024:09:38:03 -0400       /24%2f365/innovate/bricks-and-clicks/communities     501       4.82.26.248    POST
+ status             host                       datetime                                       request     method
+-----------------------------------------------------------------------------------------------------------------
+    302     37.19.69.141     19/Jul/2024:09:54:11 -0400                                  /open-source      PATCH
+    301     190.75.31.62     19/Jul/2024:09:54:11 -0400               /reintermediate/deploy/redefine        PUT
+    200     157.60.37.28     19/Jul/2024:09:54:11 -0400            /killer/architect/evolve/paradigms       HEAD
+    100   80.155.247.118     19/Jul/2024:09:54:11 -0400                             /utilize/seamless        PUT
+    400       6.9.54.144     19/Jul/2024:09:54:11 -0400                       /cross-media/e-business        PUT
+    501     237.57.56.63     19/Jul/2024:09:54:11 -0400               /paradigms/e-business/platforms     DELETE
+    200     134.227.7.62     19/Jul/2024:09:54:11 -0400                     /cultivate/maximize/morph        GET
 ```

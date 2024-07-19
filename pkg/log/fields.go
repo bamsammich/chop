@@ -21,9 +21,6 @@ func (f *Field) Width() int {
 }
 
 func (f *Field) Format(s string, lineWidth int) string {
-	if len(s) > f.width {
-		f.width = len(s) + widthBufferSize
-	}
 	return fmt.Sprintf(" %*s ", f.Width()-2, s)
 }
 
@@ -39,11 +36,18 @@ func (f *Fields) Add(name string, width int) *Field {
 		// add buffer to reduce header resizing
 		f.fields[name] = &Field{width: width + widthBufferSize}
 	}
+
+	field := f.fields[name]
+
+	if field.width < width {
+		field.width = width + widthBufferSize
+	}
+
 	if !slices.Contains(f.Order, name) {
 		f.Order = append(f.Order, name)
 	}
 
-	return f.fields[name]
+	return field
 }
 
 func (f *Fields) Get(name string) (*Field, bool) {
