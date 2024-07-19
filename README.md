@@ -16,9 +16,10 @@ Usage:
   chop [path] [flags]
 
 Flags:
-  -f, --format strings   tuples of field names to print and column width (default [message=60])
-  -h, --help             help for chop
-  -a, --print-all        print all fields; fields without format defined will be printed as JSON
+  -d, --default-field string   default field for unstructured logs (default "message")
+  -e, --exclude strings        fields to exclude
+  -h, --help                   help for chop
+  -i, --include strings        fields to print (excludes others)
 ```
 
 ## How to use
@@ -37,39 +38,97 @@ terminating app
 And prints them like this:
 
 ```bash
-> chop ./example/app.log --format message=30 -a
-                              message                                            _fields
-     0               initializing app                                                  -
-     1                App has started {"level":"INFO","timestamp":"2022/01/01 01:00:00"}
-     2             Processing records {"level":"INFO","timestamp":"2022/01/01 01:00:01"}
-     3       Error processing records {"exception":"timeout","level":"ERROR","timestamp":"2022/01/01 01:03:00"}
-     4                terminating app                                                -
+❯ chop ./example/app.log
+                                     message
+---------------------------------------------
+                            initializing app
+
+
+                                     message               timestamp    level
+------------------------------------------------------------------------------
+                             App has started     2022/01/01 01:00:00     INFO
+                          Processing records     2022/01/01 01:00:01     INFO
+
+
+                                     message               timestamp    level   exception
+------------------------------------------------------------------------------------------
+                    Error processing records     2022/01/01 01:03:00    ERROR     timeout
+                             terminating app                   <nil>    <nil>       <nil>
 ```
 
-To add more/custom fields to `chop`'s output, pass additional fields as columns:
+You can select which fields should be printed with `-i/--include:
+```bash
+❯ chop ./example/app.log -i message,level,exception
+
+
+                                     message
+---------------------------------------------
+                            initializing app
+
+
+                                     message    level
+------------------------------------------------------
+                             App has started     INFO
+                          Processing records     INFO
+
+
+                                     message    level   exception
+------------------------------------------------------------------
+                    Error processing records    ERROR     timeout
+                             terminating app    <nil>       <nil>
+```
+
+Alternatively, you can exclude certain fields from printing with `-e/--exclude`:
 
 ```bash
-> chop ./example/app.log --format timestamp=19,level=5,message=50,_fields=25 -a
-                 timestamp level                                            message                   _fields
-     0                   -     -                                   initializing app                         -
-     2 2022/01/01 01:00:01  INFO                                 Processing records                        {}
-     3 2022/01/01 01:03:00 ERROR                           Error processing records   {"exception":"timeout"}
-     4                   -     -                                    terminating app                         -
+❯ chop ./example/app.log -e level
+
+
+                                     message
+---------------------------------------------
+                            initializing app
+
+
+                                     message               timestamp
+---------------------------------------------------------------------
+                             App has started     2022/01/01 01:00:00
+                          Processing records     2022/01/01 01:00:01
+
+
+                                     message               timestamp   exception
+---------------------------------------------------------------------------------
+                    Error processing records     2022/01/01 01:03:00     timeout
+                             terminating app                   <nil>       <nil>
 ```
 
 `chop` also accepts input from `stdin`:
 
 ```bash
-> flog -f json -d 1s -n 10 | chop --format datetime=26,host=15,user-identifier=20,method=6,status=3,request=50
-                         datetime            host      user-identifier method status                                            request
-     0 24/May/2023:21:00:13 -0400 211.105.219.117                    -    GET    401                                           /dynamic
-     1 24/May/2023:21:00:14 -0400     89.4.252.66           beatty7336  PATCH    302                 /communities/iterate/seamless/rich
-     2 24/May/2023:21:00:15 -0400    91.45.224.98                    -  PATCH    405                         /dot-com/enable/synthesize
-     3 24/May/2023:21:00:16 -0400  113.159.187.73                    -   POST    500                               /revolutionize/viral
-     4 24/May/2023:21:00:17 -0400  149.165.249.24         mckenzie2588   POST    201                                   /next-generation
-     5 24/May/2023:21:00:18 -0400  108.189.36.207                    -    GET    204                                        /one-to-one
-     6 24/May/2023:21:00:19 -0400  219.22.174.217            bauch6671   HEAD    203                                     /best-of-breed
-     7 24/May/2023:21:00:20 -0400  239.198.210.73            berge6168 DELETE    501                              /platforms/compelling
-     8 24/May/2023:21:00:21 -0400 151.206.144.149                    -    GET    403     /web-readiness/front-end/one-to-one/productize
-     9 24/May/2023:21:00:22 -0400   79.183.125.13          hilpert2613    PUT    406      /mission-critical/proactive/networks/magnetic
+❯ flog -f json -d 100ms -n 10 | chop -i datetime,host,method,status,request
+
+
+                      datetime                        request  status              host  method
+------------------------------------------------------------------------------------------------
+    19/Jul/2024:09:38:02 -0400     /dot-com/synergistic/seize     406     25.42.250.210     PUT
+
+
+                      datetime                        request  status              host  method
+------------------------------------------------------------------------------------------------
+    19/Jul/2024:09:38:02 -0400              /leverage/dynamic     502     165.86.242.53    HEAD
+
+
+                      datetime                        request  status              host  method
+------------------------------------------------------------------------------------------------
+    19/Jul/2024:09:38:02 -0400     /niches/strategize/infrastructures/next-generation     304   191.161.227.211    POST
+
+
+                      datetime                                                request  status              host  method
+------------------------------------------------------------------------------------------------------------------------
+    19/Jul/2024:09:38:02 -0400                    /value-added/web+services/sexy/grow     400       92.97.30.95  DELETE
+    19/Jul/2024:09:38:02 -0400                                           /cross-media     406    60.105.221.131     PUT
+    19/Jul/2024:09:38:02 -0400           /convergence/e-tailers/e-business/compelling     500       46.7.208.26   PATCH
+    19/Jul/2024:09:38:02 -0400                               /interfaces/leading-edge     405      25.159.14.66     PUT
+    19/Jul/2024:09:38:03 -0400                   /cutting-edge/world-class/extensible     501     174.218.96.64  DELETE
+    19/Jul/2024:09:38:03 -0400                     /deploy/next-generation/synthesize     200    40.158.231.177     GET
+    19/Jul/2024:09:38:03 -0400       /24%2f365/innovate/bricks-and-clicks/communities     501       4.82.26.248    POST
 ```

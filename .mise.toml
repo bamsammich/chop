@@ -1,0 +1,4 @@
+[tools]
+go = "prefix:1.22"
+"go:github.com/mingrammer/flog" = "latest"
+"go:github.com/go-delve/delve/cmd/dlv" = "latest"
