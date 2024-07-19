@@ -3,7 +3,8 @@ package config
 const ExtraFieldsName = "_fields"
 
 var (
-	DefaultField = "message"
-	Include      []string
-	Exclude      []string
+	DefaultField  = "message"
+	ColumnPadding = 5
+	Include       []string
+	Exclude       []string
 )

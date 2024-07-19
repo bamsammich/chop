@@ -31,6 +31,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringSliceVarP(&config.Include, "include", "i", config.Include, "fields to print (excludes others)")
 	cmd.PersistentFlags().StringSliceVarP(&config.Exclude, "exclude", "e", config.Exclude, "fields to exclude")
 	cmd.PersistentFlags().StringVarP(&config.DefaultField, "default-field", "d", config.DefaultField, "default field for unstructured logs")
+	cmd.PersistentFlags().IntVarP(&config.ColumnPadding, "padding", "p", config.ColumnPadding, "column padding size")
 
 	return cmd
 }

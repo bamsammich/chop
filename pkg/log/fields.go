@@ -3,9 +3,9 @@ package log
 import (
 	"fmt"
 	"slices"
-)
 
-var widthBufferSize = 5
+	"github.com/bamsammich/chop/internal/config"
+)
 
 type Fields struct {
 	fields map[string]*Field
@@ -34,13 +34,13 @@ func NewFields() *Fields {
 func (f *Fields) Add(name string, width int) *Field {
 	if _, ok := f.fields[name]; !ok {
 		// add buffer to reduce header resizing
-		f.fields[name] = &Field{width: width + widthBufferSize}
+		f.fields[name] = &Field{width: width + config.ColumnPadding}
 	}
 
 	field := f.fields[name]
 
 	if field.width < width {
-		field.width = width + widthBufferSize
+		field.width = width + config.ColumnPadding
 	}
 
 	if !slices.Contains(f.Order, name) {

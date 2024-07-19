@@ -20,6 +20,7 @@ Flags:
   -e, --exclude strings        fields to exclude
   -h, --help                   help for chop
   -i, --include strings        fields to print (excludes others)
+  -p, --padding int            column padding size (default 5)
 ```
 
 ## How to use
